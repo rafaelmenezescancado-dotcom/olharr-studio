@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     // Try Imagen 3 first (Google AI Studio free tier format)
     try {
       const imagenResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     // Fallback: use Gemini 2.0 Flash with native image generation
     // (gemini-2.0-flash-exp supports responseModalities with IMAGE)
     const fallbackResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
