@@ -9,6 +9,7 @@ import FormStep4 from "./components/FormStep4";
 import MoodboardView from "./components/MoodboardView";
 import StoryboardView from "./components/StoryboardView";
 import HiggsfieldExport from "./components/HiggsfieldExport";
+import { generateClientPDF, generateTeamPDF } from "./lib/generatePDF";
 
 type AppState = "landing" | "form" | "loading" | "result";
 type ResultTab = "moodboard" | "storyboard" | "higgsfield";
@@ -114,6 +115,30 @@ export default function Home() {
       setError(err.message);
       setAppState("form");
     }
+  };
+
+  const handleExportClient = () => {
+    if (!result) return;
+    generateClientPDF({
+      moodboard: result.moodboard,
+      storyboard: result.storyboard,
+      higgsfield: result.higgsfield,
+      formData,
+      moodboardImages,
+      storyboardImages,
+    });
+  };
+
+  const handleExportTeam = () => {
+    if (!result) return;
+    generateTeamPDF({
+      moodboard: result.moodboard,
+      storyboard: result.storyboard,
+      higgsfield: result.higgsfield,
+      formData,
+      moodboardImages,
+      storyboardImages,
+    });
   };
 
   const handleNext = () => {
@@ -244,19 +269,45 @@ export default function Home() {
               ))}
             </div>
 
-            <button
-              onClick={() => {
-                setAppState("landing");
-                setResult(null);
-                setFormData({ deliverables: ["moodboard", "storyboard"] });
-                setStep(0);
-                setMoodboardImages({});
-                setStoryboardImages({});
-              }}
-              className="text-sm text-white/40 hover:text-white/70 transition-colors"
-            >
-              Novo projeto
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Export buttons */}
+              <div className="relative group">
+                <button className="px-3 py-2 rounded-lg text-sm font-medium bg-gold-400/10 text-gold-400 border border-gold-400/30 hover:bg-gold-400/20 transition-all">
+                  PDF ↓
+                </button>
+                <div className="absolute right-0 top-full mt-1 bg-[#1a1a1d] border border-white/10 rounded-xl overflow-hidden opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all shadow-xl z-50 min-w-[200px]">
+                  <button
+                    onClick={handleExportClient}
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-white/5 transition-colors"
+                  >
+                    <div className="text-white/80 font-medium">Para o Cliente</div>
+                    <div className="text-white/30 text-xs mt-0.5">Visual, elegante e limpo</div>
+                  </button>
+                  <div className="border-t border-white/5" />
+                  <button
+                    onClick={handleExportTeam}
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-white/5 transition-colors"
+                  >
+                    <div className="text-white/80 font-medium">Para a Equipe</div>
+                    <div className="text-white/30 text-xs mt-0.5">Técnico, detalhado e completo</div>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setAppState("landing");
+                  setResult(null);
+                  setFormData({ deliverables: ["moodboard", "storyboard"] });
+                  setStep(0);
+                  setMoodboardImages({});
+                  setStoryboardImages({});
+                }}
+                className="text-sm text-white/40 hover:text-white/70 transition-colors"
+              >
+                Novo projeto
+              </button>
+            </div>
           </div>
         </div>
 
