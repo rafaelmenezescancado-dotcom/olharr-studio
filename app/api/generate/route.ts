@@ -4,11 +4,11 @@ import { ORCHESTRATOR_PROMPT } from "@/app/lib/personas";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY não configurada. Adicione no .env.local" },
+        { error: "ANTHROPIC_API_KEY não configurada. Adicione no .env.local" },
         { status: 500 }
       );
     }
@@ -16,48 +16,43 @@ export async function POST(req: NextRequest) {
     // Build the briefing from form data
     const briefing = buildBriefing(body);
 
-    // Call Gemini API for the orchestrator
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
-                {
-                  text: `${ORCHESTRATOR_PROMPT}\n\n--- BRIEFING DO EVENTO ---\n${briefing}\n\nGere o JSON completo do moodboard e storyboard.`,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.8,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json",
+    // Call Claude API (Haiku 3.5 - cheapest option)
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 8192,
+        temperature: 0.8,
+        system: ORCHESTRATOR_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: `--- BRIEFING DO EVENTO ---\n${briefing}\n\nGere o JSON completo do moodboard e storyboard. Responda APENAS com o JSON válido.`,
           },
-        }),
-      }
-    );
+        ],
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error("Gemini API error:", errorData);
+      console.error("Claude API error:", errorData);
       return NextResponse.json(
-        { error: `Erro na API do Gemini: ${response.status}` },
+        { error: `Erro na API do Claude: ${response.status}` },
         { status: response.status }
       );
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = data.content?.[0]?.text;
 
     if (!text) {
       return NextResponse.json(
-        { error: "Resposta vazia do Gemini" },
+        { error: "Resposta vazia do Claude" },
         { status: 500 }
       );
     }
@@ -68,7 +63,8 @@ export async function POST(req: NextRequest) {
       result = JSON.parse(text);
     } catch {
       // Try to extract JSON from markdown code blocks
-      const jsonMatch = text.match(/```json?\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
+      const jsonMatch =
+        text.match(/```json?\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
       } else {
@@ -98,12 +94,20 @@ function buildBriefing(data: any): string {
   if (data.mood) parts.push(`Mood/Atmosfera: ${data.mood}`);
   if (data.colorPalette?.length)
     parts.push(`Paleta de cores: ${data.colorPalette.join(", ")}`);
-  if (data.photoStyle) parts.push(`Estilo fotográfico: ${data.photoStyle}`);
-  if (data.duration) parts.push(`Duração do aftermovie: ${data.duration}`);
+  if (data.picTimeLink) parts.push(`Link do álbum Pic-Time: ${data.picTimeLink}`);
+  if (data.albumAnalysis) parts.push(`Análise do álbum (feita por IA): ${data.albumAnalysis}`);
+  if (data.durationSeconds) {
+    const min = Math.floor(data.durationSeconds / 60);
+    const sec = data.durationSeconds % 60;
+    const durStr = min > 0 ? (sec > 0 ? `${min}min ${sec}s` : `${min}min`) : `${sec}s`;
+    parts.push(`Duração do aftermovie: ${durStr}`);
+  }
   if (data.keyMoments?.length)
     parts.push(`Momentos-chave: ${data.keyMoments.join(", ")}`);
   if (data.videoLinks?.filter((l: string) => l).length)
-    parts.push(`Vídeos de referência: ${data.videoLinks.filter((l: string) => l).join(", ")}`);
+    parts.push(
+      `Vídeos de referência: ${data.videoLinks.filter((l: string) => l).join(", ")}`
+    );
   if (data.soundtrack) parts.push(`Trilha sonora: ${data.soundtrack}`);
   if (data.soundtrackLink) parts.push(`Ref. trilha: ${data.soundtrackLink}`);
   if (data.notes) parts.push(`Notas adicionais: ${data.notes}`);
@@ -112,6 +116,8 @@ function buildBriefing(data: any): string {
   if (data.restrictions) parts.push(`Restrições: ${data.restrictions}`);
   if (data.deliverables?.length)
     parts.push(`Entregáveis: ${data.deliverables.join(", ")}`);
+  if (data.meetingKeyPoints)
+    parts.push(`\n--- PONTOS-CHAVE DA REUNIÃO COM CLIENTE ---\n${data.meetingKeyPoints}`);
 
   return parts.join("\n");
 }

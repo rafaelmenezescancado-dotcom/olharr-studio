@@ -13,14 +13,6 @@ const moods = [
   { id: "minimalista", label: "Minimalista", emoji: "◻️", desc: "Simples e essencial" },
 ];
 
-const photoStyles = [
-  { id: "cinematic", label: "Cinematic", desc: "35mm film look, shallow DOF" },
-  { id: "documental", label: "Documental", desc: "Momentos reais e espontâneos" },
-  { id: "fashion", label: "Fashion", desc: "Editorial, poses, alta produção" },
-  { id: "editorial", label: "Editorial", desc: "Storytelling jornalístico" },
-  { id: "fine-art", label: "Fine Art", desc: "Artístico e conceitual" },
-];
-
 const defaultPalettes = [
   { name: "Dourado Clássico", colors: ["#c8a44e", "#8b6914", "#f5e6c8", "#2c1810", "#e8d5b0"] },
   { name: "Azul Noturno", colors: ["#1a365d", "#2b6cb0", "#bee3f8", "#0d1b2a", "#63b3ed"] },
@@ -38,6 +30,28 @@ export default function FormStep2({
   onChange: (field: string, value: any) => void;
 }) {
   const [customColor, setCustomColor] = useState("#c8a44e");
+  const [picTimeStatus, setPicTimeStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  const handlePicTimeAnalysis = async () => {
+    if (!data.picTimeLink) return;
+    setPicTimeStatus("loading");
+    try {
+      const res = await fetch("/api/analyze-album", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: data.picTimeLink }),
+      });
+      const result = await res.json();
+      if (result.analysis) {
+        onChange("albumAnalysis", result.analysis);
+        setPicTimeStatus("done");
+      } else {
+        setPicTimeStatus("error");
+      }
+    } catch {
+      setPicTimeStatus("error");
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -108,48 +122,50 @@ export default function FormStep2({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-white/60 mb-3">Estilo Fotográfico</label>
-        <div className="flex flex-wrap gap-2">
-          {photoStyles.map((style) => (
-            <button
-              key={style.id}
-              onClick={() => onChange("photoStyle", style.id)}
-              className={`px-4 py-2.5 rounded-xl text-sm transition-all ${
-                data.photoStyle === style.id
-                  ? "bg-gold-400/20 text-gold-300 border border-gold-400/40"
-                  : "bg-white/[0.04] text-white/40 border border-white/10 hover:bg-white/[0.08]"
-              }`}
-            >
-              <div className="font-medium">{style.label}</div>
-              <div className="text-xs opacity-60 mt-0.5">{style.desc}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-white/60 mb-2">Imagens de Referência (upload)</label>
-        <div className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-gold-400/30 transition-colors cursor-pointer">
+        <label className="block text-sm font-medium text-white/60 mb-2">
+          Link do Álbum Pic-Time
+        </label>
+        <p className="text-xs text-white/30 mb-3">
+          Cole o link do álbum e a IA vai analisar o estilo visual (cores, iluminação, composição)
+        </p>
+        <div className="flex gap-2">
           <input
-            type="file"
-            multiple
-            accept="image/*"
+            type="url"
+            value={data.picTimeLink || ""}
             onChange={(e) => {
-              const files = Array.from(e.target.files || []);
-              onChange("referenceImages", files);
+              onChange("picTimeLink", e.target.value);
+              setPicTimeStatus("idle");
             }}
-            className="hidden"
-            id="ref-images"
+            placeholder="https://seusite.pic-time.com/album-exemplo"
+            className="flex-1 px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/20 focus:outline-none focus:border-gold-400/40 transition-colors text-sm"
           />
-          <label htmlFor="ref-images" className="cursor-pointer">
-            <div className="text-3xl mb-2">📸</div>
-            <div className="text-sm text-white/40">Arraste imagens de referência ou clique para selecionar</div>
-            <div className="text-xs text-white/20 mt-1">PNG, JPG até 10MB cada</div>
-          </label>
+          <button
+            onClick={handlePicTimeAnalysis}
+            disabled={!data.picTimeLink || picTimeStatus === "loading"}
+            className={`px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+              picTimeStatus === "loading"
+                ? "bg-gold-400/10 text-gold-400/50 cursor-wait"
+                : picTimeStatus === "done"
+                ? "bg-green-500/20 text-green-400 border border-green-400/30"
+                : "bg-gold-400/20 text-gold-300 border border-gold-400/40 hover:bg-gold-400/30 disabled:opacity-30 disabled:cursor-not-allowed"
+            }`}
+          >
+            {picTimeStatus === "loading"
+              ? "Analisando..."
+              : picTimeStatus === "done"
+              ? "Analisado"
+              : "Analisar Álbum"}
+          </button>
         </div>
-        {data.referenceImages?.length > 0 && (
-          <div className="mt-2 text-sm text-gold-400">
-            {data.referenceImages.length} imagem(ns) selecionada(s)
+        {picTimeStatus === "done" && data.albumAnalysis && (
+          <div className="mt-3 p-3 rounded-xl bg-gold-400/5 border border-gold-400/20 text-sm text-white/60">
+            <span className="text-gold-400 font-medium">Análise do álbum: </span>
+            {data.albumAnalysis}
+          </div>
+        )}
+        {picTimeStatus === "error" && (
+          <div className="mt-3 p-3 rounded-xl bg-red-400/10 border border-red-400/30 text-sm text-red-400">
+            Não foi possível analisar o álbum. Verifique se o link é público e tente novamente.
           </div>
         )}
       </div>

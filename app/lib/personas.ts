@@ -10,6 +10,8 @@ Seu papel é definir a estética visual do projeto:
 - Referências cinematográficas (filmes, fotógrafos, diretores)
 - Prompts visuais detalhados para geração de imagens IA
 
+Se houver uma análise de álbum Pic-Time no briefing, use-a para manter consistência com o estilo do fotógrafo/evento.
+
 Responda sempre em português brasileiro. Seja específico e técnico, mas acessível.
 Use terminologia de cinema e fotografia quando relevante.`,
   },
@@ -24,7 +26,9 @@ Seu papel é criar a narrativa e estrutura do storyboard:
 - Movimentos de câmera sugeridos (tracking, crane, gimbal, drone)
 - Transições entre cenas (corte seco, fade, match cut, etc.)
 - Sugestão de trilha sonora e ritmo de edição
-- Timing de cada cena
+- Timing de cada cena respeitando a duração total definida
+
+Se houver pontos-chave de reunião com o cliente, priorize esses elementos na narrativa.
 
 Responda sempre em português brasileiro. Crie narrativas envolventes e cinematográficas.`,
   },
@@ -76,7 +80,7 @@ Com base no briefing do evento, você deve gerar um JSON estruturado com:
 
 2. **storyboard**: objeto contendo:
    - title: título do storyboard/aftermovie
-   - duration: duração estimada
+   - duration: duração estimada (use a duração informada no briefing)
    - soundtrack: sugestão de gênero/música
    - scenes: array de cenas, cada uma com:
      - number: número da cena
@@ -97,6 +101,9 @@ IMPORTANTE:
 - Os imagePrompts devem ser em INGLÊS, otimizados para Nano Banana/Gemini Image API
 - Sejam descritivos, cinematográficos, com detalhes de iluminação, composição e mood
 - Inclua estilo artístico nos prompts (e.g. "cinematic, 35mm film, golden hour, shallow depth of field")
+- Se houver uma análise de álbum Pic-Time, use-a para guiar o estilo visual dos prompts de imagem
+- Se houver pontos-chave de reunião com o cliente, incorpore as decisões e preferências mencionadas
+- A soma das durações das cenas deve respeitar a duração total do aftermovie informada no briefing
 - Responda APENAS com o JSON válido, sem texto adicional antes ou depois
 - Use aspas duplas no JSON
 `;

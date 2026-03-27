@@ -12,36 +12,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Try Imagen 3 first (available on free tier)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: "16:9",
-            safetyFilterLevel: "BLOCK_MEDIUM_AND_ABOVE",
-          },
-        }),
-      }
-    );
-
-    if (response.ok) {
-      const data = await response.json();
-      const imageData = data.predictions?.[0]?.bytesBase64Encoded;
-      if (imageData) {
-        return NextResponse.json({
-          image: `data:image/png;base64,${imageData}`,
-        });
-      }
+    if (!prompt) {
+      return NextResponse.json(
+        { error: "Prompt é obrigatório" },
+        { status: 400 }
+      );
     }
 
-    // Fallback: use Gemini 2.5 Flash with native image generation
+    // Try Imagen 3 first (Google AI Studio free tier format)
+    try {
+      const imagenResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: prompt,
+            config: {
+              numberOfImages: 1,
+              aspectRatio: "16:9",
+            },
+          }),
+        }
+      );
+
+      if (imagenResponse.ok) {
+        const imagenData = await imagenResponse.json();
+        const imageBytes =
+          imagenData.generatedImages?.[0]?.image?.imageBytes;
+        if (imageBytes) {
+          return NextResponse.json({
+            image: `data:image/png;base64,${imageBytes}`,
+          });
+        }
+      } else {
+        const errText = await imagenResponse.text();
+        console.log("Imagen 3 failed, trying Gemini fallback:", errText);
+      }
+    } catch (imagenError) {
+      console.log("Imagen 3 error, trying Gemini fallback:", imagenError);
+    }
+
+    // Fallback: use Gemini 2.0 Flash with native image generation
+    // (gemini-2.0-flash-exp supports responseModalities with IMAGE)
     const fallbackResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49,7 +64,9 @@ export async function POST(req: NextRequest) {
           contents: [
             {
               parts: [
-                { text: `Generate a cinematic, high-quality image: ${prompt}` },
+                {
+                  text: `Generate a cinematic, high-quality, professional photograph for an event moodboard. The image should be: ${prompt}`,
+                },
               ],
             },
           ],
@@ -62,9 +79,12 @@ export async function POST(req: NextRequest) {
 
     if (!fallbackResponse.ok) {
       const err = await fallbackResponse.text();
-      console.error("Image generation error:", err);
+      console.error("Gemini image fallback error:", err);
       return NextResponse.json(
-        { error: "Erro na geração de imagem. Tente novamente.", fallback: true },
+        {
+          error: "Não foi possível gerar a imagem. Tente novamente em alguns segundos.",
+          details: err,
+        },
         { status: fallbackResponse.status }
       );
     }
@@ -79,7 +99,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: "Nenhuma imagem gerada. Tente outro prompt." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Nenhuma imagem gerada. Tente outro prompt ou tente novamente." },
+      { status: 500 }
+    );
   } catch (error: any) {
     console.error("Image generation error:", error);
     return NextResponse.json(

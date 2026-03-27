@@ -1,21 +1,14 @@
 "use client";
 
-const durations = [
-  { id: "1min", label: "1 min", desc: "Teaser rápido" },
-  { id: "2min", label: "2 min", desc: "Highlight reel" },
-  { id: "3min", label: "3 min", desc: "Aftermovie padrão" },
-  { id: "5min", label: "5+ min", desc: "Filme completo" },
-];
-
 const keyMoments = [
-  { id: "preparativos", label: "Preparativos", emoji: "💄" },
-  { id: "entrada", label: "Entrada", emoji: "🚶" },
-  { id: "cerimonia", label: "Cerimônia", emoji: "💍" },
-  { id: "discursos", label: "Discursos", emoji: "🎤" },
-  { id: "festa", label: "Festa/Celebração", emoji: "🎉" },
-  { id: "detalhes", label: "Detalhes/Decor", emoji: "🌸" },
-  { id: "drone", label: "Aéreas/Drone", emoji: "🚁" },
-  { id: "saida", label: "Saída/Encerramento", emoji: "🌙" },
+  { id: "preparativos", label: "Preparativos" },
+  { id: "entrada", label: "Entrada" },
+  { id: "cerimonia", label: "Cerimônia" },
+  { id: "discursos", label: "Discursos" },
+  { id: "festa", label: "Festa/Celebração" },
+  { id: "detalhes", label: "Detalhes/Decor" },
+  { id: "drone", label: "Aéreas/Drone" },
+  { id: "saida", label: "Saída/Encerramento" },
 ];
 
 const soundtrackGenres = [
@@ -29,6 +22,14 @@ const soundtrackGenres = [
   "R&B/Soul",
 ];
 
+function formatDuration(seconds: number): string {
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  if (min === 0) return `${sec}s`;
+  if (sec === 0) return `${min}min`;
+  return `${min}min ${sec}s`;
+}
+
 export default function FormStep3({
   data,
   onChange,
@@ -36,25 +37,31 @@ export default function FormStep3({
   data: any;
   onChange: (field: string, value: any) => void;
 }) {
+  const durationValue = data.durationSeconds || 180; // default 3min
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <label className="block text-sm font-medium text-white/60 mb-3">Duração do Aftermovie</label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {durations.map((dur) => (
-            <button
-              key={dur.id}
-              onClick={() => onChange("duration", dur.id)}
-              className={`p-4 rounded-xl border text-center transition-all ${
-                data.duration === dur.id
-                  ? "border-gold-400/60 bg-gold-400/10"
-                  : "border-white/10 bg-white/[0.02] hover:bg-white/5"
-              }`}
-            >
-              <div className="text-lg font-bold text-white/80">{dur.label}</div>
-              <div className="text-xs text-white/30 mt-1">{dur.desc}</div>
-            </button>
-          ))}
+        <label className="block text-sm font-medium text-white/60 mb-2">Duração do Aftermovie</label>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-white/30">30s</span>
+          <span className="text-lg font-bold text-gold-400">{formatDuration(durationValue)}</span>
+          <span className="text-xs text-white/30">10min</span>
+        </div>
+        <input
+          type="range"
+          min={30}
+          max={600}
+          step={30}
+          value={durationValue}
+          onChange={(e) => onChange("durationSeconds", Number(e.target.value))}
+          className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#c8a44e] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold-400 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(200,164,78,0.4)]"
+        />
+        <div className="flex justify-between mt-1 text-xs text-white/20">
+          <span>Teaser</span>
+          <span>Highlight</span>
+          <span>Padrão</span>
+          <span>Completo</span>
         </div>
       </div>
 
@@ -73,14 +80,13 @@ export default function FormStep3({
                     selected ? current.filter((m: string) => m !== moment.id) : [...current, moment.id]
                   );
                 }}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
                   selected
-                    ? "border-gold-400/60 bg-gold-400/10"
-                    : "border-white/10 bg-white/[0.02] hover:bg-white/5"
+                    ? "border-gold-400/60 bg-gold-400/10 text-gold-300"
+                    : "border-white/10 bg-white/[0.02] text-white/50 hover:bg-white/5"
                 }`}
               >
-                <span className="text-lg">{moment.emoji}</span>
-                <div className="text-sm mt-1 text-white/60">{moment.label}</div>
+                {moment.label}
               </button>
             );
           })}
